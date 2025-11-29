@@ -5,5 +5,5 @@ langchain-community
 langchain-huggingface
 faiss-cpu
 pypdf
-python-dotenv
-pandas
+sentence-transformers  
+tf-keras               
