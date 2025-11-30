@@ -117,7 +117,7 @@ def main():
         st.markdown("""
         <div class="title-container">
             <p class="title-text">🎓 PyScholar AI</p>
-            <p class="subtitle-text">Your Intelligent Data Science Mentorship Guide</p>
+            <p class="subtitle-text">Your Data Science Mentorship Guide</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -284,3 +284,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
