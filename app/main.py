@@ -23,10 +23,56 @@ except ImportError:
     show_dashboard = None
 
 # --- 4. PAGE CONFIG ---
-st.set_page_config(page_title="AI Mentorship Assistant", page_icon="🤖", layout="wide")
+st.set_page_config(
+    page_title="PyScholar AI", 
+    page_icon="🎓", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# --- 5. CUSTOM CSS FOR BEAUTIFICATION ---
+def inject_custom_css():
+    st.markdown("""
+    <style>
+        /* Hide Streamlit Branding */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+        
+        /* Custom Title Style */
+        .title-container {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: white;
+        }
+        .title-text {
+            font-size: 40px;
+            font-weight: bold;
+            margin: 0;
+        }
+        .subtitle-text {
+            font-size: 18px;
+            font-style: italic;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+        
+        /* Chat Message Styling Enhancements */
+        .stChatMessage {
+            padding: 10px;
+            border-radius: 10px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
 def main():
-    # Initialize Database on first run
+    # Apply CSS
+    inject_custom_css()
+    
+    # Initialize Database
     init_db()
 
     # Get LLM
@@ -36,24 +82,28 @@ def main():
         st.error(f"Error loading Model: {e}. Check your API keys in models/llm.py")
         st.stop()
 
-    # --- SIDEBAR NAVIGATION & UPLOAD ---
+    # --- SIDEBAR NAVIGATION ---
     with st.sidebar:
-        st.title("Navigation")
-        page = st.radio("Go to:", ["Chat", "Admin Dashboard", "Instructions"])
+        st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=80) # Placeholder Logo
+        st.title("PyScholar AI")
+        st.markdown("---")
         
-        st.divider()
-        st.subheader("📚 RAG Knowledge Base")
-        uploaded_file = st.file_uploader("Upload PDF (Mentorship/Services)", type="pdf")
+        page = st.radio("📍 Navigation", ["Chat Assistant", "Admin Dashboard", "Help & Guide"])
+        
+        st.markdown("---")
+        st.subheader("📚 Knowledge Base")
+        uploaded_file = st.file_uploader("Upload Mentorship PDF", type="pdf", help="Upload a guide for the bot to read.")
         
         if uploaded_file:
             if "vectorstore" not in st.session_state:
-                with st.spinner("Processing PDF..."):
+                with st.spinner("Processing Knowledge Base..."):
                     st.session_state.vectorstore = process_pdf(uploaded_file)
-                st.success("PDF Knowledge Base Loaded!")
+                st.success("✅ Knowledge Base Ready!")
             else:
-                st.info("PDF is loaded and ready.")
+                st.info("📂 PDF Loaded Active")
 
-        if st.button("Clear Chat History"):
+        st.markdown("---")
+        if st.button("🗑️ Reset Conversation", use_container_width=True):
             st.session_state.messages = []
             st.session_state.booking_in_progress = False
             st.session_state.confirming = False
@@ -62,8 +112,14 @@ def main():
             st.rerun()
 
     # --- PAGE 1: CHAT INTERFACE ---
-    if page == "Chat":
-        st.header("💬 PyScholar AI")
+    if page == "Chat Assistant":
+        # Custom Header
+        st.markdown("""
+        <div class="title-container">
+            <p class="title-text">🎓 PyScholar AI</p>
+            <p class="subtitle-text">Your Intelligent Data Science Mentorship Guide</p>
+        </div>
+        """, unsafe_allow_html=True)
 
         # Initialize Session State
         if "messages" not in st.session_state:
@@ -77,13 +133,17 @@ def main():
         if "last_reset_index" not in st.session_state:
             st.session_state.last_reset_index = 0
 
+        # Welcome Message if Empty
+        if not st.session_state.messages:
+            st.info("👋 **Hello!** I can help you book mentorship sessions or answer questions about the course. Upload a PDF to get started!")
+
         # Display Chat History
         for msg in st.session_state.messages:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
         # Handle User Input
-        if prompt := st.chat_input("Type your message..."):
+        if prompt := st.chat_input("Ask a question or book a session..."):
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.markdown(prompt)
@@ -105,10 +165,11 @@ def main():
                             if success:
                                 send_confirmation_email(details['email'], details['name'], str(details))
                                 response_text = f"✅ **Booking Confirmed!**\n\n**Booking ID:** #{bid}\nI have sent a confirmation email to {details['email']}."
+                                st.balloons() # 🎉 Fun effect on success
                             else:
                                 response_text = f"❌ Error saving booking: {bid}"
                             
-                            # Reset states
+                            # Reset
                             st.session_state.booking_in_progress = False
                             st.session_state.confirming = False
                             st.session_state.extracted_details = {}
@@ -124,14 +185,14 @@ def main():
                         else:
                             response_text = "Please type 'Yes' to confirm the booking or 'No' to cancel."
 
-                    # B. NORMAL FLOW (INTENT DETECTION)
+                    # B. NORMAL FLOW
                     else:
                         if st.session_state.booking_in_progress:
                             intent = "BOOKING"
                         else:
                             intent = determine_intent(prompt, chat_model)
                         
-                        # --- BRANCH 1: BOOKING FLOW ---
+                        # --- BOOKING FLOW ---
                         if intent == "BOOKING":
                             st.session_state.booking_in_progress = True
                             
@@ -166,11 +227,10 @@ def main():
                                     f"**Is this correct? (Yes/No)**"
                                 )
 
-                        # --- BRANCH 2: RAG / GENERAL QUERY (UPDATED IMPORTS) ---
+                        # --- RAG / GENERAL QUERY ---
                         else:
                             if "vectorstore" in st.session_state:
                                 retriever = st.session_state.vectorstore.as_retriever(search_kwargs={"k": 3})
-                                # FIXED IMPORTS HERE
                                 from langchain_core.runnables import RunnablePassthrough
                                 from langchain_core.prompts import PromptTemplate
                                 from langchain_core.output_parsers import StrOutputParser
@@ -205,13 +265,21 @@ def main():
             st.error("Admin Dashboard file not found.")
 
     # --- PAGE 3: INSTRUCTIONS ---
-    elif page == "Instructions":
-        st.header("📝 Instructions")
+    elif page == "Help & Guide":
+        st.header("📝 User Guide")
         st.markdown("""
-        1. **Upload a PDF:** Use the sidebar to upload a document.
-        2. **Ask Questions:** Ask about the content of the PDF.
-        3. **Book a Session:** Type "I want to book a session".
-        4. **Admin Panel:** Check the 'Admin Dashboard' tab.
+        ### How to use PyScholar AI
+        
+        1. **🤖 Chatting:** Just type naturally! You can say "Hi" or ask questions.
+        2. **📚 Knowledge Base:** - Upload a PDF in the sidebar.
+           - Ask questions like *"What is covered in Week 1?"* or *"Who are the mentors?"*
+        3. **📅 Booking a Session:**
+           - Say *"I want to book a mentorship session"*
+           - The bot will ask for your Name, Email, Phone, and Date.
+           - Once confirmed, you will receive an email!
+        
+        ### Troubleshooting
+        - If the bot gets stuck, click **"Reset Conversation"** in the sidebar.
         """)
 
 if __name__ == "__main__":
