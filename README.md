@@ -1,4 +1,4 @@
-# PyScholar AI - Data Science Mentorship Assistant
+# PyScholar AI - Data Science Mentorship Assistant (https://pyscholar-ai-y43pmvbruvmqfp8h4mfvuv.streamlit.app/)
 
 PyScholar AI is an intelligent mentorship booking assistant designed for Data Science students. It helps users schedule mock interviews, code reviews, and career guidance sessions while answering domain-specific questions using RAG (Retrieval-Augmented Generation).
 
@@ -106,4 +106,5 @@ This is the final step to get your public URL[cite: 219].
     app_password = "YOUR_16_DIGIT_CODE"
     ```
     *(Also add your Groq API Key if you haven't hardcoded it).*
+
 7.  Click **"Deploy"**.
